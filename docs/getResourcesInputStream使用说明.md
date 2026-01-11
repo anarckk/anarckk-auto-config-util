@@ -3,6 +3,9 @@
 ## 快速开始
 
 ```java
+import com.anarckk.util.AutoConfigUtil;
+
+---
 InputStream is = AutoConfigUtil.getResourcesInputStream("config/app.yml");
 String content = IOUtil.inputStreamToString(is);
 ```
