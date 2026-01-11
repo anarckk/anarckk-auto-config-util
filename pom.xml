@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.anarckk.util</groupId>
-    <artifactId>anarckk-auto-yml-util</artifactId>
+    <artifactId>anarckk-auto-config-util</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
