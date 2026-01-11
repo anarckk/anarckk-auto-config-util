@@ -145,14 +145,13 @@ public class AutoConfigUtil {
             Object value = entry.getValue();
             String fullPath = currentPath.isEmpty() ? key : currentPath + "." + key;
 
-            // FIXME: value 可能是Integer类型
+            // 处理嵌套的Map
             if (value instanceof Map) {
-                // 递归处理嵌套的Map
                 @SuppressWarnings("unchecked")
                 Map<String, Object> nestedMap = (Map<String, Object>) value;
                 boolean nestedHasOverrides = applyEnvOverridesToYamlData(nestedMap, fullPath);
                 hasOverrides = hasOverrides || nestedHasOverrides;
-            } else if (value instanceof String) {
+            } else if (value instanceof String || isNumberType(value)) {
                 // 检查系统属性和环境变量（优先使用环境变量）
                 String envKey = fullPath.replace(".", "_").toUpperCase();
                 String envValue = System.getenv(envKey);
@@ -164,13 +163,69 @@ public class AutoConfigUtil {
 
                 if (envValue != null && !envValue.trim().isEmpty()) {
                     log.debug("发现配置覆盖 {} = {}，覆盖YAML配置 {}", envKey, envValue, fullPath);
-                    data.put(key, envValue);
+                    // 尝试保持原始类型，如果环境变量是数字则转换为数字类型
+                    Object finalValue = convertToOriginalType(envValue, value);
+                    data.put(key, finalValue);
                     hasOverrides = true;
                 }
             }
         }
 
         return hasOverrides;
+    }
+
+    /**
+     * 判断value是否是数字类型
+     *
+     * @param value 要判断的对象
+     * @return 如果是数字类型返回true
+     */
+    private static boolean isNumberType(Object value) {
+        return value instanceof Integer || value instanceof Long
+                || value instanceof Double || value instanceof Float
+                || value instanceof Short || value instanceof Byte
+                || value instanceof java.math.BigInteger
+                || value instanceof java.math.BigDecimal;
+    }
+
+    /**
+     * 将环境变量值转换为原始值的类型
+     * 如果原始值是数字类型，尝试将环境变量转换为相同类型
+     *
+     * @param envValue 环境变量值
+     * @param originalValue 原始值
+     * @return 转换后的值
+     */
+    private static Object convertToOriginalType(String envValue, Object originalValue) {
+        // 如果原始值是String，直接返回
+        if (originalValue instanceof String) {
+            return envValue;
+        }
+
+        try {
+            if (originalValue instanceof Integer) {
+                return Integer.valueOf(envValue);
+            } else if (originalValue instanceof Long) {
+                return Long.valueOf(envValue);
+            } else if (originalValue instanceof Double) {
+                return Double.valueOf(envValue);
+            } else if (originalValue instanceof Float) {
+                return Float.valueOf(envValue);
+            } else if (originalValue instanceof Short) {
+                return Short.valueOf(envValue);
+            } else if (originalValue instanceof Byte) {
+                return Byte.valueOf(envValue);
+            } else if (originalValue instanceof java.math.BigInteger) {
+                return new java.math.BigInteger(envValue);
+            } else if (originalValue instanceof java.math.BigDecimal) {
+                return new java.math.BigDecimal(envValue);
+            }
+        } catch (NumberFormatException e) {
+            log.debug("无法将环境变量值 {} 转换为原始类型 {}，使用字符串值", envValue, originalValue.getClass().getSimpleName());
+        }
+
+        // 转换失败或未知类型，返回字符串
+        return envValue;
     }
 
     /**
